@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#070913">
+<title>PRISM — Spectral Optics Laboratory</title>
+<style>
+:root{
+ --bg-dark:#060915;--panel-bg:rgba(9,14,26,.84);
+ --panel-border:rgba(125,174,255,.20);--panel-hover:rgba(127,174,255,.25);
+ --text-main:#eef4ff;--text-muted:#95a7bd;
+ --accent-aurora:#80a8ff;--accent-aurora-glow:rgba(128,168,255,.30);
+ --font-mono:ui-monospace,SFMono-Regular,Consolas,monospace;
+ --font-sans:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
+}
+*{box-sizing:border-box}html,body{height:100%;width:100%;margin:0;overflow:hidden;background:var(--bg-dark);color:var(--text-main);font-family:var(--font-sans);-webkit-font-smoothing:antialiased}
+#canvas-container{position:fixed;inset:0;z-index:1}#canvas-container canvas{display:block;width:100%;height:100%;touch-action:none}
+.scene-vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 68% 80% at 45% 47%,transparent 15%,rgba(2,5,13,.38) 85%,rgba(2,5,13,.7) 100%)}
+.top-bar{position:fixed;top:18px;left:18px;right:18px;display:flex;align-items:center;justify-content:space-between;z-index:30;pointer-events:none;gap:16px}
+.top-bar>*{pointer-events:auto}
+.brand-group{display:flex;align-items:center;gap:12px;background:var(--panel-bg);border:1px solid var(--panel-border);padding:9px 14px;border-radius:14px;backdrop-filter:blur(16px)}
+.brand-title{font-size:13px;font-weight:740;letter-spacing:.02em;color:white;white-space:nowrap}
+.badge-status{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:7px 9px;color:var(--accent-aurora);border:1px solid var(--panel-border);font:700 10px var(--font-mono);white-space:nowrap}
+.badge-status:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent-aurora);box-shadow:0 0 12px var(--accent-aurora)}
+.action-group{display:flex;align-items:center;gap:5px}
+.glass-btn{background:var(--panel-bg);border:1px solid var(--panel-border);color:var(--text-main);padding:9px 12px;font-size:11px;cursor:pointer;border-radius:10px;transition:background .18s,color .18s}
+.glass-btn:hover{background:rgba(255,255,255,.10)}.glass-btn.active{color:var(--accent-aurora);background:rgba(128,168,255,.17)}
+.hud-overlay{position:fixed;left:19px;top:85px;z-index:9;width:281px;padding:18px 17px;background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:17px;backdrop-filter:blur(20px);box-shadow:0 16px 38px rgba(0,0,0,.3);pointer-events:none}
+.hud-title{font:750 9px var(--font-mono);letter-spacing:.14em;color:var(--text-muted);text-transform:uppercase;margin-bottom:15px}
+.kp-meter-box{margin-bottom:16px}.kp-header{display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:9px}.kp-header span+span{font:700 11px var(--font-mono);color:var(--accent-aurora)}.kp-bar{height:4px;border-radius:5px;background:rgba(255,255,255,.1);overflow:hidden}.kp-fill{height:100%;width:68%;background:linear-gradient(90deg,#8279e7,#57d2ff,#fff5aa,#ff6974);transition:width .3s}
+.hud-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font:11px/1.5 var(--font-mono);margin-top:10px;color:#91a0b6}.hud-row span:first-child{max-width:157px}.hud-val{color:#e7eefb;text-align:right;font-weight:650;white-space:nowrap}
+.camera-dock{position:fixed;left:50%;bottom:17px;transform:translateX(-50%);z-index:20;display:flex;gap:4px;padding:5px;border:1px solid var(--panel-border);background:rgba(8,14,25,.94);border-radius:15px;box-shadow:0 16px 40px rgba(0,0,0,.45);backdrop-filter:blur(16px)}
+.dock-btn{border:0;border-radius:10px;padding:10px 13px;cursor:pointer;font:650 11px var(--font-sans);color:#9ca9be;background:transparent;white-space:nowrap}.dock-btn:hover{background:rgba(255,255,255,.07);color:#fff}.dock-btn.active{background:rgba(128,168,255,.17);color:#9bbcff}
+.inspector{position:fixed;right:18px;top:85px;bottom:86px;width:336px;z-index:25;display:flex;flex-direction:column;overflow:hidden;background:var(--panel-bg);border:1px solid var(--panel-border);border-radius:17px;box-shadow:0 22px 46px rgba(0,0,0,.36);backdrop-filter:blur(22px);transition:transform .27s,opacity .25s}
+.inspector.collapsed{transform:translateX(calc(100% + 38px));opacity:0;pointer-events:none}.tab-header{display:flex;gap:6px;padding:12px;border-bottom:1px solid rgba(255,255,255,.08)}.tab-btn{flex:1;padding:10px 5px;background:none;color:#8d9cb5;border:0;border-radius:9px;font:650 11px var(--font-sans);cursor:pointer}.tab-btn:hover{background:rgba(255,255,255,.06)}.tab-btn.active{background:rgba(128,168,255,.17);color:#a8c5ff}
+.tab-content{overflow-y:auto;scrollbar-width:thin;flex:1;padding:18px 17px 30px;display:none}.tab-content.active{display:block}.ctrl-group{margin-bottom:20px}.ctrl-label{display:flex;justify-content:space-between;align-items:baseline;gap:9px;color:#a9b6c9;font-size:11px;margin-bottom:9px}.ctrl-label span.val{color:var(--accent-aurora);font:650 11px var(--font-mono)}input[type=range]{width:100%;height:4px;appearance:none;border-radius:10px;background:rgba(255,255,255,.15);outline:none;cursor:pointer}input[type=range]::-webkit-slider-thumb{appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent-aurora);box-shadow:0 0 14px rgba(128,168,255,.45)}.inspector select{width:100%;height:38px;background:#121c2c;color:#e6f2ff;border:1px solid var(--panel-border);border-radius:9px;padding:0 10px;font-size:11px;cursor:pointer}
+.section-divider{height:1px;background:rgba(255,255,255,.09);margin:18px 0}.section-label{font:700 9px var(--font-mono);letter-spacing:.14em;color:#72849d;text-transform:uppercase;margin:18px 0 12px}.check-row{display:flex;align-items:center;justify-content:space-between;gap:13px;font-size:11px;color:#acbed0;margin:0 0 15px;cursor:pointer}.check-row input{appearance:none;flex:0 0 33px;width:33px;height:19px;border:1px solid rgba(255,255,255,.17);background:rgba(255,255,255,.12);border-radius:20px;position:relative;cursor:pointer}.check-row input:after{content:"";position:absolute;width:13px;height:13px;top:2px;left:2px;border-radius:50%;background:#7f8d9d;transition:transform .17s,background .17s}.check-row input:checked{border-color:rgba(128,168,255,.5);background:rgba(128,168,255,.29)}.check-row input:checked:after{transform:translateX(14px);background:#9dc0ff}.subnote{color:#8697ae;font-size:10px;line-height:1.72;margin:12px 0 8px}.stat-card{background:rgba(255,255,255,.033);border:1px solid rgba(255,255,255,.065);border-radius:11px;padding:12px 13px;margin-bottom:10px}.stat-title{font:690 9px var(--font-mono);text-transform:uppercase;letter-spacing:.09em;color:#8796ae;margin-bottom:8px}.stat-val{color:#f0f7ff;font:700 18px var(--font-mono)}
+.scene-caption{position:fixed;left:calc(19px);top:342px;z-index:6;width:270px;pointer-events:none}.scene-caption .kicker{color:#8da3c8;font:700 9px var(--font-mono);letter-spacing:.21em}.scene-caption h1{font:750 24px/1.1 var(--font-sans);letter-spacing:-.035em;color:#f0f7ff;margin:9px 0}.scene-caption p{max-width:265px;color:#8798b3;font-size:11px;line-height:1.65;margin:0}.scene-meta{margin-top:14px;color:#7396bd;font:700 9px var(--font-mono);letter-spacing:.1em}
+.scene-corner{position:fixed;right:376px;bottom:89px;color:#71839c;text-align:right;font:9px/1.8 var(--font-mono);letter-spacing:.1em;pointer-events:none;z-index:5}.shortcut-hints{position:fixed;bottom:20px;left:18px;font:10px var(--font-mono);color:#9ca8bf;background:var(--panel-bg);border-radius:9px;padding:8px 10px;z-index:11;pointer-events:none}.shortcut-hints kbd{font-weight:700;color:#e0e8ff}
+.ui-hidden .top-bar,.ui-hidden .hud-overlay,.ui-hidden .camera-dock,.ui-hidden .inspector,.ui-hidden .scene-caption,.ui-hidden .scene-corner{opacity:0!important;pointer-events:none!important}
+@media(max-width:1220px){.scene-caption{display:none}.scene-corner{display:none}.hud-overlay{width:230px}.inspector{width:305px}}
+@media(max-width:880px){.top-bar{top:10px;left:11px;right:11px;flex-direction:column;align-items:stretch}.brand-group{width:100%}.action-group{align-self:flex-end}.hud-overlay{top:115px;left:11px}.inspector{top:115px;right:11px;bottom:74px}.camera-dock{bottom:11px}.scene-caption{display:none}}
+@media(max-width:650px){.hud-overlay{width:212px;padding:12px}.camera-dock{max-width:calc(100vw - 20px)}.dock-btn{padding:7px 8px;font-size:10px}}
+/* PRISM / Optical controls: a compact measured-vs-showcase tool. */
+.physics-mode-toggle{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:12px;background:rgba(3,7,16,.48);border:1px solid rgba(128,168,255,.13)}
+.mode-chip{min-width:0;min-height:36px;border:1px solid transparent;border-radius:9px;cursor:pointer;font:700 10px var(--font-sans);color:#91a6c5;background:transparent;transition:.18s ease;white-space:nowrap}
+.mode-chip:hover{color:#e6efff;background:rgba(255,255,255,.055)}
+.mode-chip.active{color:#c8dcff;border-color:rgba(128,168,255,.38);background:rgba(128,168,255,.17);box-shadow:inset 0 1px rgba(255,255,255,.06)}
+.physics-mode-caption{font:700 9px var(--font-mono);letter-spacing:.10em;color:#80a8ff;margin:10px 1px 22px}
+.live-explanation{padding:11px 12px;border-left:2px solid #80a8ff;background:rgba(128,168,255,.06);border-radius:0 10px 10px 0;color:#bdcce0;font:500 11px/1.65 var(--font-sans);margin:12px 0 20px}
+.help-asterisk{color:#8daddb;cursor:help}
+.view-index{display:inline-block;margin-left:12px;padding-left:12px;color:#80a8ff;border-left:1px solid rgba(140,170,230,.23)}
+.tiny-live-dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin:0 5px 1px 0;background:#80a8ff;box-shadow:0 0 9px rgba(128,168,255,.58)}
+@media(max-width:880px){.scene-caption{display:none!important}}
+</style>
+<link rel="stylesheet" href="assets/atelier-ui.css">
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body data-project-id="prism-laboratory" data-project-name="Prism Optics Laboratory" data-accent="#80a8ff">
+<div id="canvas-container"></div><div class="scene-vignette"></div>
+<div class="top-bar"><div class="brand-group"><div class="brand-title">Prism Optics Laboratory</div><div class="badge-status" id="statusBadge">N-BK7 · LIVE</div></div>
+<div class="action-group">
+<button class="glass-btn" id="btnReset" title="Reset scene [R]">↻ Reset</button>
+<button class="glass-btn" id="btnPause" title="Pause simulation [Space]">⏸ Pause</button>
+<button class="glass-btn active" id="btnGuides" title="Toggle optical guides [G]">⊕ Guides</button>
+<button class="glass-btn" id="btnCapture" title="Capture image [P]">▣ Capture</button>
+<button class="glass-btn" id="btnDrawer" title="Toggle inspector [H]">⚙ Inspector</button>
+<button class="glass-btn" id="btnFullscreen" title="Fullscreen [F]">⛶ Fullscreen</button>
+</div></div>
+<div class="hud-overlay" id="hudOverlay">
+<div class="hud-title">Optical bench / spectral telemetry</div>
+<div class="kp-meter-box"><div class="kp-header"><span>Visible spectrum</span><span id="hudSpectrum">400–700 nm</span></div><div class="kp-bar"><div class="kp-fill" id="spectrumFill"></div></div></div>
+<div class="hud-row"><span>Glass medium</span><span class="hud-val" id="hudGlass">N-BK7 crown</span></div>
+<div class="hud-row"><span>Refractive index · 550 nm</span><span class="hud-val" id="hudIndex">1.5185</span></div>
+<div class="hud-row"><span>Angular dispersion</span><span class="hud-val" id="hudSpread">1.2°</span></div>
+<div class="hud-row"><span>Unpolarized transmission</span><span class="hud-val" id="hudTransmission">86%</span></div>
+<div class="hud-row"><span>Exit behavior</span><span class="hud-val" id="hudBehavior">REFRACTION</span></div>
+</div>
+<div class="scene-caption"><div class="kicker">DEVIANCE / EXPERIMENT 008 <span id="sceneViewIndex" class="view-index">01 / 04</span></div><h1 id="sceneViewTitle">Light, separated.</h1><p id="sceneViewDescription">White light becomes a spectrum as every wavelength takes a different path.</p><div class="scene-meta"><span class="tiny-live-dot"></span> SPECTRAL RAY TRACING · INTERACTIVE</div></div>
+<div class="scene-corner">DRAG TO ORBIT · SCROLL TO ZOOM<br>WAVELENGTH-DEPENDENT SNELL TRACING</div>
+<div class="camera-dock" id="cameraDock" role="group" aria-label="Prism views">
+<button class="dock-btn active" data-preset="0">Spectrum</button>
+<button class="dock-btn" data-preset="1">Glass Macro</button>
+<button class="dock-btn" data-preset="2">Bench Survey</button>
+<button class="dock-btn" data-preset="3">Spectral Fan</button>
+</div>
+<div class="inspector" id="inspectorDrawer">
+<div class="tab-header"><button class="tab-btn active" data-tab="tab-optics">Optics</button><button class="tab-btn" data-tab="tab-light">Light & Scene</button><button class="tab-btn" data-tab="tab-analytics">Analytics</button></div>
+<div class="tab-content active" id="tab-optics">
+<div class="section-label">Ray display</div>
+<div class="physics-mode-toggle" role="group" aria-label="Measured or presentation ray display">
+<button type="button" class="mode-chip active" id="btnMeasured" title="Calculated directions with no visual exaggeration">Measured · 1×</button>
+<button type="button" class="mode-chip" id="btnShowcase" title="Widen spectral spread for presentation; measurements remain physical">Showcase · 2.5×</button>
+</div>
+<div class="physics-mode-caption" id="physicsModeText" aria-live="polite">MEASURED · 1×</div>
+<div class="section-label">Material / dispersion</div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Glass composition</span></div><select id="sMaterial"><option value="bk7">N-BK7 · crown glass</option><option value="sf11">N-SF11 · dense flint</option><option value="silica">Fused silica · quartz</option></select></div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Incoming beam angle</span><span class="val" id="vIncident">+18.0°</span></div><input type="range" id="sIncident" min="-8" max="40" step=".5" value="18"></div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Prism rotation</span><span class="val" id="vRotation">0.0°</span></div><input type="range" id="sRotation" min="-18" max="18" step=".5" value="0"></div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Presentation spread <span class="help-asterisk" title="Display-only, not part of optical calculations">ⓘ</span></span><span class="val" id="vSeparation">1.00×</span></div><input type="range" id="sSeparation" min="1" max="5" step=".25" value="1"></div>
+<div class="subnote">The ray directions and numerical readings use Sellmeier dispersion, Snell's law and Fresnel transmission. <strong>Measured (1×)</strong> draws calculated directions. Showcase widens only the displayed fan.</div>
+<div class="live-explanation" id="liveExplanation" aria-live="polite">Visible rays follow their calculated directions at 1×.</div>
+<div class="section-divider"></div>
+<label class="check-row"><span>Show entry/exit normals</span><input type="checkbox" id="tGuides" checked></label>
+<label class="check-row"><span>Show internal reflections</span><input type="checkbox" id="tInternal" checked></label>
+<label class="check-row"><span>Show spectral detector</span><input type="checkbox" id="tDetector" checked></label>
+</div>
+<div class="tab-content" id="tab-light">
+<div class="section-label">Presentation</div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Beam glow</span><span class="val" id="vGlow">1.15×</span></div><input type="range" id="sGlow" min="0.2" max="2.5" step=".05" value="1.15"></div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Tracer animation speed</span><span class="val" id="vSpeed">0.85×</span></div><input type="range" id="sSpeed" min="0" max="2.5" step=".05" value=".85"></div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Dust in light</span><span class="val" id="vDust">38%</span></div><input type="range" id="sDust" min="0" max="100" step="1" value="38"></div>
+<div class="ctrl-group"><div class="ctrl-label"><span>Glass visibility</span><span class="val" id="vGlass">38%</span></div><input type="range" id="sGlass" min="5" max="90" step="1" value="38"></div>
+<div class="section-divider"></div>
+<label class="check-row"><span>Show optical workbench</span><input type="checkbox" id="tBench" checked></label>
+<label class="check-row"><span>Show light-path tracers</span><input type="checkbox" id="tPhotons" checked></label>
+<label class="check-row"><span>Show soft volumetric beams</span><input type="checkbox" id="tVolume" checked></label>
+<div class="subnote">Ambient light shafts, beam glow and moving tracers are illustrative. They are not a simulation of quantum photons, wave interference, or measured airborne scattering.</div>
+</div>
+<div class="tab-content" id="tab-analytics">
+<div class="stat-card"><div class="stat-title">Rendering performance</div><div class="stat-val" id="statFps">— FPS</div></div>
+<div class="stat-card"><div class="stat-title">Actual violet-to-red separation</div><div class="stat-val" id="statDispersion">—</div></div>
+<div class="stat-card"><div class="stat-title">Critical angle · glass to air</div><div class="stat-val" id="statCritical">—</div></div>
+<div class="stat-card"><div class="stat-title">Visible spectral paths</div><div class="stat-val" id="statRays">—</div></div>
+<div class="stat-card"><div class="stat-title">Current viewpoint</div><div class="stat-val" id="statView">Spectrum</div></div>
+<div class="section-divider"></div><div class="hud-title">Physics notes</div><div class="subnote">Each wavelength from 400 to 700 nm is traced independently through a triangular prism. Refraction uses Snell’s law; transmission uses unpolarized Fresnel coefficients. Strong refraction may cause total internal reflection, which is a real optical effect. Wavelength colors are display approximations rather than colorimetrically calibrated.</div>
+</div></div>
+<div class="shortcut-hints"><kbd>Space</kbd> Pause | <kbd>1–4</kbd> Views | <kbd>M</kbd> Measured / Showcase | <kbd>G</kbd> Guides | <kbd>R</kbd> Reset | <kbd>H</kbd> Inspector | <kbd>P</kbd> Capture | <kbd>F</kbd> Fullscreen</div>
+<script type="module" src="assets/prism-scene.js"></script>
+<script src="assets/atelier-ui.js"></script>
+</body>
+</html>
