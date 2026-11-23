@@ -2,6 +2,10 @@
 
 A standalone Three.js experiment packaged with the independent DEVIANCE / ATELIER UI. No cross-project navigation.
 
+## Try it
+
+Open on [GitHub Pages](https://deviancevxxxxm.github.io/prism-optics/)
+
 ## How to run
 
 Host the repository with GitHub Pages (root `index.html`). Or serve the folder over HTTP for local development. Open it with a modern WebGL-capable browser and internet access; Three.js is loaded from the public CDN.
